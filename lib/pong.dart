@@ -163,8 +163,8 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
 
       // Ball collision with top paddle
       paddleY = 60;
-      if (ballPosition.dx >= paddleBottomX - BALL_RADIUS &&
-          ballPosition.dx <= paddleBottomX + PADDLE_WIDTH + BALL_RADIUS &&
+      if (ballPosition.dx >= paddleTopX - BALL_RADIUS &&
+          ballPosition.dx <= paddleTopX + PADDLE_WIDTH + BALL_RADIUS &&
           ballPosition.dy >= paddleY - BALL_RADIUS &&
           ballPosition.dy <= paddleY + PADDLE_HEIGHT + BALL_RADIUS) {
         ballVelocity = Offset(ballVelocity.dx, ballVelocity.dy.abs());
