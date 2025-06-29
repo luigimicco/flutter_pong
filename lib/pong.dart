@@ -182,6 +182,19 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
         );
       }
 
+      if (ballPosition.dy < 0.75 * GAME_SIZE.height) {
+        int space = (2 * BALL_SPEED / 60).toInt();
+        int rnd = Random().nextInt(space);
+        double newPosition = paddleTopX;
+
+        if (ballPosition.dx < paddleTopX) {
+          newPosition = paddleTopX - rnd;
+        } else if (ballPosition.dx > (paddleTopX + PADDLE_WIDTH)) {
+          newPosition = paddleTopX + rnd;
+        }
+        paddleTopX = newPosition;
+      }
+
       // Ball goes off bottom
       if (ballPosition.dy >= GAME_SIZE.height) {
         _loseLife();
