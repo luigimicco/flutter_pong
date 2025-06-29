@@ -1,9 +1,9 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-
+import 'dart:math';
 import 'globals.dart';
+import 'logic.dart';
 import 'painter.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class PongGame extends StatefulWidget {
   const PongGame({super.key});
@@ -25,14 +25,18 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
   bool gameStarted = false;
   bool gameOver = false;
   int score = 0;
-  int lives = 3;
+  int lives = MAX_LIVES;
+
+  // Google font for retro effect
+  late Future googleFontsPending;
 
   @override
   void initState() {
     super.initState();
+    googleFontsPending = GoogleFonts.pendingFonts([GoogleFonts.pressStart2p]);
 
     _gameController = AnimationController(
-      duration: Duration(milliseconds: (1000 / 60).toInt()),
+      duration: Duration(milliseconds: (1000 / GAME_FPS).toInt()),
       vsync: this,
     )..addListener(_updateGame);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -63,7 +67,7 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
       gameStarted = false;
       gameOver = false;
       score = 0;
-      lives = 3;
+      lives = MAX_LIVES;
     });
     _initializeGame();
   }
@@ -123,13 +127,12 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
       // Update ball position
       // using velocity => s = v * t, where t = 1 / 60
       ballPosition = Offset(
-        ballPosition.dx + ballVelocity.dx / 60,
-        ballPosition.dy + ballVelocity.dy / 60,
+        ballPosition.dx + ballVelocity.dx / GAME_FPS,
+        ballPosition.dy + ballVelocity.dy / GAME_FPS,
       );
 
-      // Ball collision with walls
-      if (ballPosition.dx <= BALL_RADIUS ||
-          ballPosition.dx >= GAME_SIZE.width - BALL_RADIUS) {
+      if (checkWallCollision(ballPosition, GAME_SIZE)) {
+        // Ball collision with walls
         ballVelocity = Offset(-ballVelocity.dx, ballVelocity.dy);
         ballPosition = Offset(
           ballPosition.dx <= BALL_RADIUS
@@ -137,73 +140,38 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
               : GAME_SIZE.width - BALL_RADIUS,
           ballPosition.dy,
         );
-      }
-
-      // Ball collision with bottom paddle
-      double paddleY = GAME_SIZE.height - 60;
-      if (ballPosition.dx >= paddleBottomX - BALL_RADIUS &&
-          ballPosition.dx <= paddleBottomX + PADDLE_WIDTH + BALL_RADIUS &&
-          ballPosition.dy >= paddleY - BALL_RADIUS &&
-          ballPosition.dy <= paddleY + PADDLE_HEIGHT + BALL_RADIUS) {
+      } else if (checkBottomPaddleCollision(paddleBottomX, ballPosition)) {
+        // Ball collision with bottom paddle
         ballVelocity = Offset(ballVelocity.dx, -ballVelocity.dy.abs());
 
         // Add angle based on where ball hits paddle
         double difference =
             ballPosition.dx - (paddleBottomX + PADDLE_WIDTH / 2);
-        ballVelocity = Offset(
-          ballVelocity.dx + difference * 3,
-          ballVelocity.dy,
-        );
-        // Limit velocity
-        ballVelocity = Offset(
-          ballVelocity.dx.clamp(-BALL_SPEED, BALL_SPEED),
-          ballVelocity.dy,
-        );
-      }
+        ballVelocity = updateVelocity(ballVelocity, difference);
 
-      // Ball collision with top paddle
-      paddleY = 60;
-      if (ballPosition.dx >= paddleTopX - BALL_RADIUS &&
-          ballPosition.dx <= paddleTopX + PADDLE_WIDTH + BALL_RADIUS &&
-          ballPosition.dy >= paddleY - BALL_RADIUS &&
-          ballPosition.dy <= paddleY + PADDLE_HEIGHT + BALL_RADIUS) {
+        // Limit velocity
+        ballVelocity = limitVelocity(ballVelocity);
+      } else if (checkTopPaddleCollision(paddleTopX, ballPosition)) {
+        // Ball collision with top paddle
         ballVelocity = Offset(ballVelocity.dx, ballVelocity.dy.abs());
 
         // Add angle based on where ball hits paddle
         double difference = ballPosition.dx - (paddleTopX + PADDLE_WIDTH / 2);
-        ballVelocity = Offset(
-          ballVelocity.dx + difference * 3,
-          ballVelocity.dy,
-        );
+
+        ballVelocity = updateVelocity(ballVelocity, difference);
+
         // Limit velocity
-        ballVelocity = Offset(
-          ballVelocity.dx.clamp(-BALL_SPEED, BALL_SPEED),
-          ballVelocity.dy,
-        );
-      }
-
-      if (ballPosition.dy < 0.75 * GAME_SIZE.height) {
-        int space = (2 * BALL_SPEED / 60).toInt();
-        int rnd = Random().nextInt(space);
-        double newPosition = paddleTopX;
-
-        if (ballPosition.dx < paddleTopX) {
-          newPosition = paddleTopX - rnd;
-        } else if (ballPosition.dx > (paddleTopX + PADDLE_WIDTH)) {
-          newPosition = paddleTopX + rnd;
-        }
-        paddleTopX = newPosition;
-      }
-
-      // Ball goes off bottom
-      if (ballPosition.dy >= GAME_SIZE.height) {
+        ballVelocity = limitVelocity(ballVelocity);
+      } else if (ballPosition.dy >= GAME_SIZE.height) {
+        // Ball goes off bottom
         _loseLife();
-      }
-
-      // Ball goes off top
-      if (ballPosition.dy <= 0) {
+      } else if (ballPosition.dy <= 0) {
+        // Ball goes off top
         _updateScore();
       }
+
+      // update top paddle
+      paddleTopX = newPaddlePosition(paddleTopX, ballPosition);
     });
   }
 
@@ -226,8 +194,16 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final retroFontStyleNormal = GoogleFonts.pressStart2p(
+      textStyle: Theme.of(context).textTheme.titleMedium,
+    );
+    final retroFontStyleGameOver = GoogleFonts.pressStart2p(
+      color: Colors.red,
+      textStyle: Theme.of(context).textTheme.headlineLarge,
+    );
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Color(0xFF222222),
       body: SafeArea(
         child: GestureDetector(
           onTapDown: (details) {
@@ -256,54 +232,67 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
               ),
 
               // UI overlay
-              Positioned(
-                top: 20,
-                left: 20,
-                right: 20,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Lives: ${'●' * lives}'),
-                    const Spacer(),
-                    Text('Score: $score'),
-                  ],
-                ),
-              ),
+              livesAndScoreWidget(retroFontStyleNormal),
 
               // Instructions/Game Over overlay
               if (!gameStarted && !gameOver)
-                Center(
-                  child: Text(
-                    'Tap to start game!\n\nDrag to move paddle',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+                infoStarWidget(retroFontStyleNormal),
 
               // Game Over
               if (gameOver)
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Game Over!'),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _restartGame,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 30,
-                            vertical: 15,
-                          ),
-                        ),
-                        child: Text('Restart Game'),
-                      ),
-                    ],
-                  ),
-                ),
+                gameOverWidget(retroFontStyleGameOver, retroFontStyleNormal),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Positioned livesAndScoreWidget(TextStyle retroFontStyleNormal) {
+    return Positioned(
+      top: 20,
+      left: 20,
+      right: 20,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Lives: ${'●' * lives}', style: retroFontStyleNormal),
+          const Spacer(),
+          Text('Score: $score', style: retroFontStyleNormal),
+        ],
+      ),
+    );
+  }
+
+  Center infoStarWidget(TextStyle retroFontStyleNormal) {
+    return Center(
+      child: Text(
+        'Tap to start game!\n\nDrag to move paddle',
+        textAlign: TextAlign.center,
+        style: retroFontStyleNormal,
+      ),
+    );
+  }
+
+  Center gameOverWidget(
+    TextStyle retroFontStyleGameOver,
+    TextStyle retroFontStyleNormal,
+  ) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text('Game Over!', style: retroFontStyleGameOver),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _restartGame,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+            ),
+            child: Text('Restart Game', style: retroFontStyleNormal),
+          ),
+        ],
       ),
     );
   }
