@@ -2,6 +2,8 @@
 
 A classic Pong clone built with Flutter.
 
+![](/screenshots/pong.png)
+
 ## Features
 
 - Smooth paddle control with touch/drag
@@ -24,3 +26,4 @@ A classic Pong clone built with Flutter.
 - AnimationController for game loop
 - Collision detection for ball/paddle/walls
 - State management with StatefulWidget
+
