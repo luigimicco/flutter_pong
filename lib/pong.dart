@@ -56,6 +56,16 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
     ballVelocity = const Offset(0, 0);
   }
 
+  void _restartGame() {
+    setState(() {
+      gameStarted = false;
+      gameOver = false;
+      score = 0;
+      lives = 3;
+    });
+    _initializeGame();
+  }
+
   void _updateGame() {}
 
   @override
