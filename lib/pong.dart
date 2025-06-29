@@ -13,6 +13,7 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
   late AnimationController _gameController;
 
   Offset ballVelocity = const Offset(0, 0);
+  Offset ballPosition = const Offset(0, 0);
 
   @override
   void initState() {
@@ -44,6 +45,8 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
     GAME_SIZE = const Size(0, 0);
     ballVelocity = const Offset(0, 0);
   }
+
+  void _updateGame() {}
 
   @override
   Widget build(BuildContext context) {
