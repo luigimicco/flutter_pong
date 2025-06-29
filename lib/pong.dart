@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import 'globals.dart';
@@ -30,7 +32,7 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
     super.initState();
 
     _gameController = AnimationController(
-      duration: Duration(milliseconds: (1 / 60).toInt()),
+      duration: Duration(milliseconds: (1000 / 60).toInt()),
       vsync: this,
     )..addListener(_updateGame);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -90,7 +92,31 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
     gameStarted = false;
   }
 
+  void _startGame() {
+    if (!gameStarted && !gameOver) {
+      setState(() {
+        gameStarted = true;
+        ballVelocity = Offset(
+          (Random().nextBool() ? 1 : -1) * BALL_SPEED * 0.5,
+          -BALL_SPEED,
+        );
+      });
+    }
+  }
+
   void _updateGame() {
+    if ((!gameStarted || gameOver) &&
+        MediaQuery.of(context).size != GAME_SIZE) {
+      GAME_SIZE = MediaQuery.of(context).size;
+      paddleBottomX = GAME_SIZE.width / 2 - PADDLE_WIDTH / 2;
+      paddleTopX = GAME_SIZE.width / 2 - PADDLE_WIDTH / 2;
+
+      ballPosition = Offset(
+        paddleBottomX + PADDLE_WIDTH / 2,
+        GAME_SIZE.height - 60 - BALL_RADIUS - 2,
+      );
+    }
+
     if (!gameStarted || gameOver) return;
 
     setState(() {
@@ -168,14 +194,41 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
     });
   }
 
+  void _movePaddle(Offset tapPosition) {
+    setState(() {
+      paddleBottomX = (tapPosition.dx - PADDLE_WIDTH / 2).clamp(
+        0,
+        GAME_SIZE.width - PADDLE_WIDTH,
+      );
+
+      // If game hasn't started, move ball with paddle
+      if (!gameStarted) {
+        ballPosition = Offset(
+          paddleBottomX + PADDLE_WIDTH / 2,
+          GAME_SIZE.height - 60 - BALL_RADIUS - 2,
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: GestureDetector(
-          onTapDown: (details) {},
-          onPanUpdate: (details) {},
+          onTapDown: (details) {
+            if (!gameStarted && !gameOver) {
+              _startGame();
+            } else if (!gameOver) {
+              _movePaddle(details.localPosition);
+            }
+          },
+          onPanUpdate: (details) {
+            if (!gameOver) {
+              _movePaddle(details.localPosition);
+            }
+          },
           child: Stack(
             children: [
               // Game canvas
