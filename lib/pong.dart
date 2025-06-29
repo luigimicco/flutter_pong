@@ -66,7 +66,107 @@ class _PongGameState extends State<PongGame> with TickerProviderStateMixin {
     _initializeGame();
   }
 
-  void _updateGame() {}
+  void _loseLife() {
+    lives--;
+    if (lives <= 0) {
+      gameOver = true;
+    } else {
+      _resetBall();
+    }
+  }
+
+  void _updateScore() {
+    score++;
+    _resetBall();
+  }
+
+  void _resetBall() {
+    // Position ball on top center of bottom paddle
+    ballPosition = Offset(
+      paddleBottomX + PADDLE_WIDTH / 2,
+      GAME_SIZE.height - 60 - BALL_RADIUS - 2,
+    );
+    ballVelocity = const Offset(0, 0);
+    gameStarted = false;
+  }
+
+  void _updateGame() {
+    if (!gameStarted || gameOver) return;
+
+    setState(() {
+      // Update ball position
+      // using velocity => s = v * t, where t = 1 / 60
+      ballPosition = Offset(
+        ballPosition.dx + ballVelocity.dx / 60,
+        ballPosition.dy + ballVelocity.dy / 60,
+      );
+
+      // Ball collision with walls
+      if (ballPosition.dx <= BALL_RADIUS ||
+          ballPosition.dx >= GAME_SIZE.width - BALL_RADIUS) {
+        ballVelocity = Offset(-ballVelocity.dx, ballVelocity.dy);
+        ballPosition = Offset(
+          ballPosition.dx <= BALL_RADIUS
+              ? BALL_RADIUS
+              : GAME_SIZE.width - BALL_RADIUS,
+          ballPosition.dy,
+        );
+      }
+
+      // Ball collision with bottom paddle
+      double paddleY = GAME_SIZE.height - 60;
+      if (ballPosition.dx >= paddleBottomX - BALL_RADIUS &&
+          ballPosition.dx <= paddleBottomX + PADDLE_WIDTH + BALL_RADIUS &&
+          ballPosition.dy >= paddleY - BALL_RADIUS &&
+          ballPosition.dy <= paddleY + PADDLE_HEIGHT + BALL_RADIUS) {
+        ballVelocity = Offset(ballVelocity.dx, -ballVelocity.dy.abs());
+
+        // Add angle based on where ball hits paddle
+        double difference =
+            ballPosition.dx - (paddleBottomX + PADDLE_WIDTH / 2);
+        ballVelocity = Offset(
+          ballVelocity.dx + difference * 3,
+          ballVelocity.dy,
+        );
+        // Limit velocity
+        ballVelocity = Offset(
+          ballVelocity.dx.clamp(-BALL_SPEED, BALL_SPEED),
+          ballVelocity.dy,
+        );
+      }
+
+      // Ball collision with top paddle
+      paddleY = 60;
+      if (ballPosition.dx >= paddleBottomX - BALL_RADIUS &&
+          ballPosition.dx <= paddleBottomX + PADDLE_WIDTH + BALL_RADIUS &&
+          ballPosition.dy >= paddleY - BALL_RADIUS &&
+          ballPosition.dy <= paddleY + PADDLE_HEIGHT + BALL_RADIUS) {
+        ballVelocity = Offset(ballVelocity.dx, ballVelocity.dy.abs());
+
+        // Add angle based on where ball hits paddle
+        double difference = ballPosition.dx - (paddleTopX + PADDLE_WIDTH / 2);
+        ballVelocity = Offset(
+          ballVelocity.dx + difference * 3,
+          ballVelocity.dy,
+        );
+        // Limit velocity
+        ballVelocity = Offset(
+          ballVelocity.dx.clamp(-BALL_SPEED, BALL_SPEED),
+          ballVelocity.dy,
+        );
+      }
+
+      // Ball goes off bottom
+      if (ballPosition.dy >= GAME_SIZE.height) {
+        _loseLife();
+      }
+
+      // Ball goes off top
+      if (ballPosition.dy <= 0) {
+        _updateScore();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
