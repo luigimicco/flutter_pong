@@ -1,16 +1,26 @@
-# flutter_pong
+### Flutter Pong 
 
-A new Flutter project.
+A classic Pong clone built with Flutter.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- Smooth paddle control with touch/drag
+- Score tracking
+- 3 lives
+- Game over screen with restart option
+- ~60 FPS gameplay
+- Responsive layout
 
-A few resources to get you started if this is your first Flutter project:
+## How to Play
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+1. Tap to start the game
+2. Drag left/right to move the paddle
+4. Don't let the ball fall below the paddle
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Technical Details
+
+- Built with Flutter/Dart
+- Uses CustomPainter for rendering
+- AnimationController for game loop
+- Collision detection for ball/paddle/walls
+- State management with StatefulWidget
